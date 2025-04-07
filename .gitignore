@@ -1,0 +1,29 @@
+# Sistema
+.DS_Store
+
+# Ambiente virtuale
+venv/
+.env/
+
+# Cache Python
+__pycache__/
+*.py[cod]
+
+# Notebook
+*.ipynb_checkpoints
+
+# Modelli e checkpoint
+*.pt
+*.pth
+*.ckpt
+checkpoints/
+models/
+
+# Dataset locali
+datasets/
+dataset/
+embeddings/
+outputs/
+
+# VS Code
+.vscode/
