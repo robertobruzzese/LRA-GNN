@@ -17,11 +17,9 @@ __pycache__/
 *.pth
 *.ckpt
 checkpoints/
-models/
+
 
 # Dataset locali
-datasets/
-dataset/
 embeddings/
 outputs/
 

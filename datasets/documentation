@@ -1,0 +1,18 @@
+si lancia morph.py che ha il set di landmarks e  crea il file con le coordinate dei punti dei landmark ridotti nella cartella point_reduced
+
+lo script extract_metadata estrae i metadati e li scrive in datasets/data/MORPH/images/Train/metadata/morph_data.csv
+
+dopo aver lanciato morph.py si dovrebbe lanciare draw_landmarks.py che legge sia i landmarks completi che quelli che sono reduced (creati da morph) e li disegna sulle immagini contenute in MORPH/images/Train/landmarked e MORPH/images/Train/landmarked_reduced
+
+dopo dovrebbe lanciarsi segment_patches.py che segmenta in patch con all interno i keypoints
+questo script crea un file con le coordinate delle patches create nella cartella patches dal nome nomeimmagine_patches.csv (è un dizionario di keypoint patch map)
+
+dopo si lancia graph_contsructor.py (che però non visualizza il grafo perchè lo fa il main.py)
+
+quindi si lancia main.py
+
+il file batch_preprocess_faces chiama utils/preprocessing.py ed elabora la dimensione di tutte le immagini nella directore images/Train e le mette nella cartella image_preprocessed
+
+si lancia PYTORCH_ENABLE_MPS_FALLBACK=1 python train_rl_agent.py 
+PYTORCH_ENABLE_MPS_FALLBACK=1 python evaluate_rl_agent.py (dopo aver lanciato train_rl_agent.py)
+PYTORCH_ENABLE_MPS_FALLBACK=1 python models/train_classifier.py (PRIMA DI LANCIARE TRAIN_RL_AGENT.PY)
