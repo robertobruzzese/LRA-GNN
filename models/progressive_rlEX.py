@@ -1,8 +1,5 @@
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import numpy as np
 
+<<<<<<< HEAD
 class QNetwork(nn.Module):
 
     """
@@ -96,3 +93,5 @@ if __name__ == "__main__":
 
     print("Action selected:", action)
     print("Reward:", reward)
+=======
+>>>>>>> 309d146aafc706db906e1f1a1968dab4d0fe842a
