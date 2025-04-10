@@ -1,15 +1,15 @@
+import argparse
+import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
-import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from dataset.dataloader_definition import embedding_loader
+from dataset.embedding_dataset import EmbeddingDataset 
+
  # importa dal file dove lo hai definito
-
-
-# 📦 Classe MLP per classificazione della decade (10 classi)
+# 📦 MLP Classifier
 class AgeGroupClassifier(nn.Module):
     def __init__(self, input_dim, hidden_dim=64, num_classes=10):
         super().__init__()
@@ -23,12 +23,9 @@ class AgeGroupClassifier(nn.Module):
 
     def forward(self, x):
         return self.net(x)
-    
 
-
-# 🧠 Funzione per addestrare il classificatore
+# 🧠 Training
 def train_classifier(embeddings, ages, input_dim, device='cpu', epochs=5500, batch_size=32):
-    # 🎯 Calcolo delle etichette decade (0–9)
     targets = torch.tensor([int(age.item()) // 10 for age in ages], dtype=torch.long)
 
     dataset = TensorDataset(embeddings, targets)
@@ -57,31 +54,50 @@ def train_classifier(embeddings, ages, input_dim, device='cpu', epochs=5500, bat
         accuracy = 100 * correct / len(dataset)
         print(f"📚 Epoch {epoch+1}/{epochs} - Loss: {total_loss:.4f} - Accuracy: {accuracy:.2f}%")
 
-    # 💾 Salvataggio
     os.makedirs("checkpoints", exist_ok=True)
     torch.save(model.state_dict(), "checkpoints/classifier.pth")
     print("✅ Classificatore salvato in checkpoints/classifier.pth")
     return model
-# 🔁 Estrai tutti i dati reali dal dataloader
-def extract_embeddings_and_labels(dataloader, device):
-    X_list = []
-    y_list = []
 
+# 🔄 Estrazione
+def extract_embeddings_and_labels(dataloader, device):
+    X_list, y_list = [], []
     for embedding, age in dataloader:
         X_list.append(embedding.to(device))
         y_list.append(age.to(device))
-
     X = torch.cat(X_list, dim=0)
     y = torch.cat(y_list, dim=0)
     return X, y
 
-# 🔽 Esecuzione diretta per usare i tuoi dati reali
+# 🚀 Entry Point
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", type=str, default="MORPH", help="Dataset da usare: MORPH o FGNET")
+    args = parser.parse_args()
+    dataset_name = args.dataset.upper()
+    
+
+    # 📁 Directory corretta
+    embedding_dir = "embeddings/train" if dataset_name == "MORPH" else "embeddings_FGNET/train"
+    checkpoint_dir = os.path.join("checkpoints", dataset_name)
+
+    # ⚙️ Dispositivo
+    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+
+    # 📥 Carica dataset
+    embedding_dataset = EmbeddingDataset(embedding_dir)
+    embedding_loader = DataLoader(embedding_dataset, batch_size=1, shuffle=False)
+
+    # 📊 Estrai embedding
+    dataloader = DataLoader(EmbeddingDataset(embedding_dir), batch_size=1, shuffle=False)
+    X_real, y_real = extract_embeddings_and_labels(dataloader, device)
+
+    # 🧠 Addestramento
+    model = train_classifier(X_real, y_real, input_dim=X_real.shape[1], device=device)
+
+
+    # 💾 Salvataggio nella cartella corretta
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    torch.save(model.state_dict(), os.path.join(checkpoint_dir, "classifier.pth"))
+    print(f"✅ Classificatore salvato in {checkpoint_dir}/classifier.pth")
    
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    # Estrai dati reali dal tuo embedding_loader
-    X_real, y_real = extract_embeddings_and_labels(embedding_loader, device)
-
-    # Addestra il classificatore
-    train_classifier(X_real, y_real, input_dim=X_real.shape[1], device=device)

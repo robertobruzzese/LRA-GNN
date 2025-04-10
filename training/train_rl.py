@@ -12,6 +12,7 @@ import random
 from models.regressor import AgeRegressor
 from utils.metrics import compute_mae_rmse
 import numpy as np
+import os
 
 
 
@@ -49,14 +50,18 @@ def prlae_loss(pred_probs, pred_ages, target_class, target_age, eta=0.4, gamma=1
     mae = torch.abs(pred_ages - target_age).mean()
     return eta * fl + (1 - eta) * mae
 
-def train_prlae(agent,  dataloader, device, num_episodes=80):
+def train_prlae(agent, dataloader, device, dataset_name="MORPH", num_episodes=200):
     env = RLEnvironment()
+
     # 📦 Classificatore per stimare il gruppo iniziale (decade)
 
     embedding_dim = next(iter(dataloader))[0].shape[1]
     # Classificatore
+    classifier_path = os.path.join("checkpoints", dataset_name, "classifier.pth")
+
     classifier = AgeGroupClassifier(input_dim=embedding_dim).to(device)
-    classifier.load_state_dict(torch.load("checkpoints/classifier.pth"))  # se hai un modello già salvato
+    classifier.load_state_dict(torch.load(classifier_path))
+
     classifier.eval()
 
     # 👉 assegna al tuo agente
@@ -246,7 +251,12 @@ def train_prlae(agent,  dataloader, device, num_episodes=80):
         if episode_accuracy > best_accuracy:
             best_accuracy = episode_accuracy
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            save_path = f"checkpoints/best_agent_{timestamp}.pth"
+            
+            checkpoint_dir = os.path.join("checkpoints", dataset_name)
+            os.makedirs(checkpoint_dir, exist_ok=True)
+            save_path = os.path.join(checkpoint_dir, f"best_agent_{timestamp}.pth")
+
+            
             agent.save(save_path)
             print(f"💾 Miglior modello salvato (Episode {episode+1}, Accuracy: {episode_accuracy:.2f}%)")
         # ALLA FINE DI OGNI EPISODIO

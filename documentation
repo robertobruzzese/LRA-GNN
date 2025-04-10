@@ -1,0 +1,63 @@
+si lancia morph.py che ha il set di landmarks e  crea il file con le coordinate dei punti dei landmark ridotti nella cartella point_reduced
+
+lo script extract_metadata estrae i metadati e li scrive in datasets/data/MORPH/images/Train/metadata/morph_data.csv
+
+dopo aver lanciato morph.py si dovrebbe lanciare draw_landmarks.py che legge sia i landmarks completi che quelli che sono reduced (creati da morph) e li disegna sulle immagini contenute in MORPH/images/Train/landmarked e MORPH/images/Train/landmarked_reduced
+
+dopo dovrebbe lanciarsi segment_patches.py che segmenta in patch con all interno i keypoints
+questo script crea un file con le coordinate delle patches create nella cartella patches dal nome nomeimmagine_patches.csv (è un dizionario di keypoint patch map)
+
+dopo si lancia graph_contsructor.py (che però non visualizza il grafo perchè lo fa il main.py)
+
+quindi si lancia main.py
+
+il file batch_preprocess_faces chiama utils/preprocessing.py ed elabora la dimensione di tutte le immagini nella directore images/Train e le mette nella cartella image_preprocessed
+
+si lancia PYTORCH_ENABLE_MPS_FALLBACK=1 python train_rl_agent.py 
+PYTORCH_ENABLE_MPS_FALLBACK=1 python evaluate_rl_agent.py (dopo aver lanciato train_rl_agent.py)
+PYTORCH_ENABLE_MPS_FALLBACK=1 python models/train_classifier.py (PRIMA DI LANCIARE TRAIN_RL_AGENT.PY)
+---------------------------
+1)per il preprocessing si lancia batches_preprocess_faces_fgnet.py oppure batches_preprocess_faces_morph.py e le immagini preprocessate normalizzate saranno messe dentro la cartellla image_preprocessed
+2) si lancia morph.py oppure fgnet.py che è lo script che genera i landmark completi e ridotti a partire dalle immagini preprocessate! cosa fa ? Per ogni immagine in images_preprocessed, estrae:
+I 68 landmark facciali completi
+Un sottoinsieme ridotto di landmark chiave (es. occhi, naso, bocca)
+E salva due file .pts per ciascuna immagine:
+In points/ → 68 landmark
+In points_reduced/ → landmark selezionati per analisi (es. aging)
+3) si lancia datasets/draw_landmarks_morph.py o draw_landmark_fgnet.py per visualizzare i landmark
+questo script ha come output images/Train/landmarked/	📸 Immagini con 68 landmark (rossi)	Se esiste points/<nome>.pts
+images/Train/landmarked_reduced/	📸 Immagini con landmark ridotti (blu)	Se esiste points_reduced/<nome>.pts
+
+4) utils/segment_patches_morph.py o utils/segment_patches_morph.py 🔍 Questo script ha lo scopo di analizzare immagini faciali preprocessate, associare i keypoint facciali a delle patch regolari 6×6 sovrapposte all’immagine, e salvare i risultati sia come CSV che come immagine visuale con overlay delle patch e landmark. dentro la cartella Train/images_segmented
+esso carica  i keypoint (landmark ridotti) da points_dir = "datasets/data/MORPH/points_reduced" o points_dir = "datasets/data/FGNET/points_reduced"
+5) dopo di che si lancia main_morph.py oppure main_fgnet.py che chiamano la versione  graph_constructor_morph.py oppure graph_constructor_morph.py per creare il grafo per ogni immagine e fa queste azioni 
+Step	Cosa fa	Script  
+1️⃣	Carica immagine + patch CSV	image_path, csv_path	✅
+2️⃣	Costruisce grafo base + RW	construct_initial_graph	✅
+3️⃣	Salva graph_initial.pt, graph_rw.pt		✅
+4️⃣	Applica Latent Relation Capturer (LRC)	LatentRelationCapturer	✅
+5️⃣	Salva 12 grafi LRC (graph_lrc_*.pt)		✅
+6️⃣	Estrae deep feature via ResGCN	extract_deep_features	✅
+7️⃣	Salva deep_features.pt
+ode_features.pt	Embedding visivo 512D per ogni patch (nodo)
+edge_features.pt	(Opzionale) Media degli embedding tra coppie connesse
+graph_initial.pt	Grafo iniziale basato su similarità
+graph_rw.pt	Grafo dopo Random Walk
+graph_lrc_*.pt (12 file)	Grafi connessi via multi-head attention
+deep_features.pt	Feature finali da ResGCN
+✅ Conclusione
+Hai centrato il punto:
+✔ Sì, il sistema genera anche gli embedding delle patch (nodi)
+✔ Sono salvati in node_features.pt nella cartella dell’immagine
+
+6) adesso va lanciato train_lra_gnn.py con parametro --dataset MORPH oppure FGNET
+così : python train_lra_gnn.py --dataset FGNET
+il comando da dare su mac con gpu è questo:
+export PYTORCH_ENABLE_MPS_FALLBACK=1
+python train_lra_gnn.py --dataset FGNET
+
+7) viene poi lanciato il classificatore python models/train_classifier.py --dataset FGNET (o MORPH)
+
+8) infine viene lanciato PYTORCH_ENABLE_MPS_FALLBACK=1 python train_rl_agent.py --dataset FGNET (oppure MORPH)
+ 
+ 9) per la evaluation : PYTORCH_ENABLE_MPS_FALLBACK=1 python evaluate_rl_agent.py --dataset FGNET (oopure MORPH)

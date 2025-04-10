@@ -40,7 +40,9 @@ class ProgressiveRLAgent:
             return np.random.choice(action_dim)
         else:
             with torch.no_grad():
+                state = state.to(self.device)  # 👈 Fix: assicura che il tensore sia sullo stesso device del modello
                 q_values = self.q_network(state)
+                #q_values = self.q_network(state)
                 return torch.argmax(q_values).item()
 
     def update(self, state, action, reward, next_state, done):

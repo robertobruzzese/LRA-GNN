@@ -127,11 +127,15 @@ class ProgressiveRLAgent:
         for target_param, param in zip(self.target_network.parameters(), self.q_network.parameters()):
             target_param.data.copy_(self.tau * param.data + (1.0 - self.tau) * target_param.data)
 
-    def save(self, path="checkpoints/rl_agent_best.pth"):
-        torch.save(self.q_network.state_dict(), path)
+    def save(self, path=None):
+         if path is None:
+            raise ValueError("❗ Devi specificare un path per salvare l'agente RL.")
+         torch.save(self.q_network.state_dict(), path)
+    
     
     def load(self, path):
         self.q_network.load_state_dict(torch.load(path, map_location=self.device))
+        self.q_network.to(self.device)  
         self.q_network.eval()
         self.target_network.load_state_dict(self.q_network.state_dict())
         print(f"📥 Modello caricato da: {path}")
@@ -203,7 +207,7 @@ class ProgressiveRLAgent:
 
                     reached_target = False
 
-                    for step in range(30):  # o max_steps
+                    for step in range(100):  # o max_steps
                         #pos_encoding = torch.tensor([[env.r / 10, env.c / 10]], device=device)
                         #target_encoding = torch.tensor([[gi / 10, ei / 10]], device=device)
                         target_tensor = torch.tensor([[gi / 10, ei / 10]], device=xi.device)

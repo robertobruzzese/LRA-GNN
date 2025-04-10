@@ -1,23 +1,42 @@
+import os
+import argparse
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch_geometric.loader import DataLoader
-import os
-from utils.save_embeddings import save_embeddings  # 👈 importa funzione
+from utils.save_embeddings import save_embeddings
 from models.lra_gnn import LRA_GNN
-from models.progressive_rl import ProgressiveRLAgent
 from training.train_model import train_model
-from training.train_rl import train_prlae
 from dataset.age_estimation_dataset import AgeEstimationDataset
-from dataset.embedding_dataset import EmbeddingDataset
+
+# === Parser degli argomenti
+
+# 🔹 Parsing degli argomenti da linea di comando
+parser = argparse.ArgumentParser(description="Training LRA-GNN")
+parser.add_argument("--dataset", type=str, default="MORPH", help="Nome del dataset: MORPH o FGNET")
+args = parser.parse_args()
+
+# === Configurazione dinamica
+DATASET_NAME = args.dataset.upper()
+root_dir = f"datasets/data/{DATASET_NAME}/"
+checkpoint_dir = os.path.join("checkpoints", DATASET_NAME)
+os.makedirs(checkpoint_dir, exist_ok=True)
+checkpoint_path = os.path.join(checkpoint_dir, f"best_lra_gnn_{DATASET_NAME.lower()}.pth")
 
 
 if __name__ == "__main__":
-    # 🔹 Dispositivo
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-
+    # 🔹 Dataset path
+    if args.dataset == "MORPH":
+        data_path = "datasets/data/MORPH"
+    elif args.dataset == "FGNET":
+        data_path = "datasets/data/FGNET"
+    else:
+        raise ValueError(f"Dataset sconosciuto: {args.dataset}")
     # 🔹 Dataset
-    dataset = AgeEstimationDataset(root_dir="datasets/data/MORPH/")
+    #dataset = AgeEstimationDataset(root_dir=root_dir)
+    
+    dataset = AgeEstimationDataset(root_dir=data_path, dataset_name=args.dataset)
     train_size = int(0.8 * len(dataset))
     val_size = len(dataset) - train_size
     train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
@@ -27,7 +46,7 @@ if __name__ == "__main__":
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size)
 
-    # 🔹 Modello LRA-GNN
+    # 🔹 Modello
     model = LRA_GNN(
         num_layers=12,
         num_heads=8,
@@ -37,16 +56,13 @@ if __name__ == "__main__":
         num_steps=5
     ).to(device)
 
-    # 🔹 Ottimizzatore e criterio
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     criterion = nn.MSELoss()
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5, verbose=True)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode='min', factor=0.5, patience=5, verbose=True
+    )
 
-    # 🔹 Training LRA-GNN
-    num_epochs = 50
-    save_path = "checkpoints/best_lra_gnn.pth"
-    os.makedirs("checkpoints", exist_ok=True)
-
+    # 🔹 Training
     train_loss, val_loss, val_mae, cs5, eps = train_model(
         model=model,
         train_loader=train_loader,
@@ -54,31 +70,29 @@ if __name__ == "__main__":
         optimizer=optimizer,
         criterion=criterion,
         device=device,
-        num_epochs=num_epochs,
-        save_path=save_path,
+        num_epochs=50,
+        save_path=checkpoint_path,
         scheduler=scheduler,
         early_stopping_patience=10,
         show_plot=True
     )
 
-    print("\n✅ Training LRA-GNN completato. Ora inizio fase RL...")
+    print(f"\n✅ Training LRA-GNN completato per {DATASET_NAME}!")
+    dataset_name = args.dataset.upper()
+    # 🔹 Salva embedding
+    # 🔹 Determina la cartella di salvataggio in base al dataset
+    if dataset_name.upper() == "FGNET":
+        train_dir = "embeddings_FGNET/train"
+        val_dir = "embeddings_FGNET/val"
+    else:
+        train_dir = "embeddings/train"
+        val_dir = "embeddings/val"
 
-    # 🔍 Visualizza gli embedding del training set
-    print("\n🎯 Stampa embedding del training set:")
-    model.eval()
-    with torch.no_grad():
-        for batch_idx, batch in enumerate(train_loader):
-            batch = batch.to(device)
-            embeddings = model(batch, return_features=True)
-            for i, emb in enumerate(embeddings):
-                print(f"[Batch {batch_idx} - Sample {i}] Embedding: {emb.tolist()}")
+    # 🔹 Salva embedding
+    save_embeddings(model, train_loader, device, save_dir=train_dir)
+    save_embeddings(model, val_loader, device, save_dir=val_dir)
 
 
-    # 🔹 Salva gli embedding del training set
-    save_embeddings(model, train_loader, device, save_dir="embeddings/train")
-
-    # (opzionale) Salva anche gli embedding del validation set
-    save_embeddings(model, val_loader, device, save_dir="embeddings/val")
 
     # 🔍 Determina dinamicamente la dimensione embedding
     #sample_batch = next(iter(train_loader)).to(device)
