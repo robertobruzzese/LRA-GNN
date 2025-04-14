@@ -16,6 +16,21 @@ __pycache__/
 *.pt
 *.pth
 *.ckpt
+*.pts
+datasets/data/MORPH/patches/
+datasets/data/MORPH/images/Train/landmarked_reduced/*.JPG
+datasets/data/MORPH/images/Train/landmarked_reduced/*.jpg
+datasets/data/MORPH/images/Train/landmarked_reduced/*.JPG
+datasets/data/MORPH/images/Train/landmarked/*.JPG
+datasets/data/MORPH/images/Train/landmarked/*.jpg
+datasets/data/MORPH/images/Train/images_segmented/*.jpg
+datasets/data/MORPH/images/Train/images_segmented/*.JPG
+datasets/data/MORPH/images/Train/images_preprocessed/*.JPG
+datasets/data/MORPH/images/Train/images_preprocessed/*.jpg
+datasets/data/MORPH/images/Train/*.jpg
+datasets/data/MORPH/images/Train/*.JPG
+
+
 checkpoints/
 
 
