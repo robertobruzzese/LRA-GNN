@@ -50,7 +50,10 @@ def prlae_loss(pred_probs, pred_ages, target_class, target_age, eta=0.4, gamma=1
     mae = torch.abs(pred_ages - target_age).mean()
     return eta * fl + (1 - eta) * mae
 
-def train_prlae(agent, dataloader, device, dataset_name="MORPH", num_episodes=200):
+
+def train_prlae(agent, dataloader, device, dataset_name="MORPH", num_episodes=200, start_episode=0, save_every=50, best_accuracy=0.0):
+
+
     env = RLEnvironment()
 
     # 📦 Classificatore per stimare il gruppo iniziale (decade)
@@ -98,7 +101,9 @@ def train_prlae(agent, dataloader, device, dataset_name="MORPH", num_episodes=20
     all_predicted_ages = []    # 👈
 
 
-    for episode in range(num_episodes):
+    #for episode in range(num_episodes):
+    for episode in range(start_episode, start_episode + num_episodes):
+
         #epsilon = max(0.1, 1.0 - episode / num_episodes)
         #epsilon = max(0.1, 1.0 - episode / (num_episodes * 2))
         #epsilon = max(0.05, 1.0 - episode / num_episodes)
@@ -269,6 +274,18 @@ def train_prlae(agent, dataloader, device, dataset_name="MORPH", num_episodes=20
         print(f"✅ Episode {episode+1}: Accuracy COMPLETA per episodio = {episode_accuracy:.2f}%")
         print(f"🔹 Episode {episode+1}: Accuracy SOLO DECADE per episodio = {decade_accuracy:.2f}%")
         print(f"📦 Totale corretti per episodio : {correct_predictions} su {total_samples}")
+            # Salvataggio intermedio ogni `save_every` episodi
+        if (episode + 1) % save_every == 0:
+            absolute_episode = episode + 1  # ✅ già valore assoluto, non aggiungere start_episode
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            checkpoint_dir = os.path.join("checkpoints", dataset_name.upper())
+            os.makedirs(checkpoint_dir, exist_ok=True)
+            save_path = os.path.join(checkpoint_dir, f"rl_agent_partial_{absolute_episode}_{timestamp}.pth")
+            agent.save(save_path)
+            print(f"💾 Modello salvato dopo {absolute_episode} episodi in: {save_path}")
+
+
+
 
         # 🔁 Aggiorna la rete target (Double DQN soft update)
         agent.soft_update_target_network()
@@ -333,3 +350,5 @@ def train_prlae(agent, dataloader, device, dataset_name="MORPH", num_episodes=20
         mae = np.mean(errors)
         rmse = np.sqrt(np.mean((np.array(real_ages_list) - np.array(predicted_ages_list)) ** 2))
         print(f"📏 MAE: {mae:.2f} | RMSE: {rmse:.2f}")
+    return best_accuracy
+

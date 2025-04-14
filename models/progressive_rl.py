@@ -167,6 +167,9 @@ class ProgressiveRLAgent:
         total_correct_decade = 0
         accuracy_list = []
         decade_accuracy_list = []
+        true_labels = []
+        predicted_labels = []
+
 
         with torch.no_grad():
 
@@ -254,6 +257,9 @@ class ProgressiveRLAgent:
                        desc = "❌ ERRATO"
                        print(f"❌ Predicted: ({env.r}, {env.c}) | GT: ({gi}, {ei})")
                     # Manca questa riga importante nel loop interno
+                    true_labels.append(gi)
+                    predicted_labels.append(env.r)
+
                     total_samples += 1
 
                         # 🔹 Nuova metrica: riga corretta, colonna errata
@@ -299,5 +305,7 @@ class ProgressiveRLAgent:
                 "only_row_accuracy": 100.0 * only_row_correct / total_samples,
                 "avg_reward": total_reward / total_samples,
                 "accuracy_list": accuracy_list,
-                "decade_accuracy_list": decade_accuracy_list
+                "decade_accuracy_list": decade_accuracy_list,
+                "true_labels": true_labels,
+                "predicted_labels": predicted_labels
             }

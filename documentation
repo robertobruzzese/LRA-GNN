@@ -17,8 +17,8 @@ si lancia PYTORCH_ENABLE_MPS_FALLBACK=1 python train_rl_agent.py
 PYTORCH_ENABLE_MPS_FALLBACK=1 python evaluate_rl_agent.py (dopo aver lanciato train_rl_agent.py)
 PYTORCH_ENABLE_MPS_FALLBACK=1 python models/train_classifier.py (PRIMA DI LANCIARE TRAIN_RL_AGENT.PY)
 ---------------------------
-1)per il preprocessing si lancia batches_preprocess_faces_fgnet.py oppure batches_preprocess_faces_morph.py e le immagini preprocessate normalizzate saranno messe dentro la cartellla image_preprocessed
-2) si lancia morph.py oppure fgnet.py che è lo script che genera i landmark completi e ridotti a partire dalle immagini preprocessate! cosa fa ? Per ogni immagine in images_preprocessed, estrae:
+1)per il preprocessing si lancia batches_preprocess_faces_fgnet.py oppure batch_preprocess_faces_morph.py e le immagini preprocessate normalizzate saranno messe dentro la cartellla image_preprocessed
+2) si lancia datasets/morph.py oppure datasets/fgnet.py che è lo script che genera i landmark completi e ridotti a partire dalle immagini preprocessate! cosa fa ? Per ogni immagine in images_preprocessed, estrae:
 I 68 landmark facciali completi
 Un sottoinsieme ridotto di landmark chiave (es. occhi, naso, bocca)
 E salva due file .pts per ciascuna immagine:
@@ -28,7 +28,7 @@ In points_reduced/ → landmark selezionati per analisi (es. aging)
 questo script ha come output images/Train/landmarked/	📸 Immagini con 68 landmark (rossi)	Se esiste points/<nome>.pts
 images/Train/landmarked_reduced/	📸 Immagini con landmark ridotti (blu)	Se esiste points_reduced/<nome>.pts
 
-4) utils/segment_patches_morph.py o utils/segment_patches_morph.py 🔍 Questo script ha lo scopo di analizzare immagini faciali preprocessate, associare i keypoint facciali a delle patch regolari 6×6 sovrapposte all’immagine, e salvare i risultati sia come CSV che come immagine visuale con overlay delle patch e landmark. dentro la cartella Train/images_segmented
+4) utils/segment_patches_morph.py o utils/segment_patches_fgnet.py 🔍 Questo script ha lo scopo di analizzare immagini faciali preprocessate, associare i keypoint facciali a delle patch regolari 6×6 sovrapposte all’immagine, e salvare i risultati sia come CSV che come immagine visuale con overlay delle patch e landmark. dentro la cartella Train/images_segmented
 esso carica  i keypoint (landmark ridotti) da points_dir = "datasets/data/MORPH/points_reduced" o points_dir = "datasets/data/FGNET/points_reduced"
 5) dopo di che si lancia main_morph.py oppure main_fgnet.py che chiamano la versione  graph_constructor_morph.py oppure graph_constructor_morph.py per creare il grafo per ogni immagine e fa queste azioni 
 Step	Cosa fa	Script  
@@ -50,13 +50,14 @@ Hai centrato il punto:
 ✔ Sì, il sistema genera anche gli embedding delle patch (nodi)
 ✔ Sono salvati in node_features.pt nella cartella dell’immagine
 
-6) adesso va lanciato train_lra_gnn.py con parametro --dataset MORPH oppure FGNET
+6) viene poi lanciato il classificatore python models/train_classifier.py --dataset FGNET (o MORPH)
+
+7) adesso va lanciato train_lra_gnn.py  --dataset MORPH oppure FGNET
 così : python train_lra_gnn.py --dataset FGNET
 il comando da dare su mac con gpu è questo:
-export PYTORCH_ENABLE_MPS_FALLBACK=1
-python train_lra_gnn.py --dataset FGNET
+PYTORCH_ENABLE_MPS_FALLBACK=1
+python train_lra_gnn.py --dataset FGNET (oppure MORPH)
 
-7) viene poi lanciato il classificatore python models/train_classifier.py --dataset FGNET (o MORPH)
 
 8) infine viene lanciato PYTORCH_ENABLE_MPS_FALLBACK=1 python train_rl_agent.py --dataset FGNET (oppure MORPH)
  

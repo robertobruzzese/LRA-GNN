@@ -7,6 +7,8 @@ from training.train_rl import train_prlae
 from dataset.embedding_dataset import EmbeddingDataset
 from models.classifier import AgeGroupClassifier
 from datetime import datetime
+import glob
+import re
 
 # 🔧 Argomento per scegliere il dataset
 parser = argparse.ArgumentParser()
@@ -57,16 +59,51 @@ agent = ProgressiveRLAgent(
     classifier=classifier
 )
 agent.q_network.to(device)
+# 🔁 Carica automaticamente il checkpoint più recente se esiste (ordinando per episodio)
+checkpoint_dir = os.path.join("checkpoints", dataset_name.upper())
+checkpoints = glob.glob(os.path.join(checkpoint_dir, "rl_agent_partial_*.pth"))
+
+# 🔢 Funzione per estrarre il numero di episodio dal nome file
+def extract_episode_num(path):
+    match = re.search(r'rl_agent_partial_(\d+)_', path)
+    return int(match.group(1)) if match else -1
+
+# 📋 Ordina i checkpoint in base all'episodio (non alfabeticamente)
+checkpoints = sorted(checkpoints, key=extract_episode_num)
+
+if checkpoints:
+    last_checkpoint = checkpoints[-1]
+    agent.load(last_checkpoint)
+    print(f"📥 Checkpoint caricato da {last_checkpoint}")
+    start_step = extract_episode_num(last_checkpoint)
+else:
+    print("🚀 Nessun checkpoint trovato. Inizio training da zero.")
+    start_step = 0
 
 # 🚀 Allena l’agente
 if __name__ == "__main__":
-    train_prlae(
-        agent=agent,
-        dataloader=embedding_loader,
-        device=device,
-        dataset_name=dataset_name,
-        num_episodes=200
-    )
+    # Esegui 4 batch da 50 episodi
+    best_accuracy = 0.0
+    for step in range(start_step, 200, 50):
+        best_accuracy = train_prlae(
+            agent=agent,
+            dataloader=embedding_loader,
+            device=device,
+            dataset_name=dataset_name,
+            num_episodes=50,
+            start_episode=step,
+            save_every=50,
+            best_accuracy=best_accuracy
+        )
+
+
+    #train_prlae(
+    #    agent=agent,
+    #    dataloader=embedding_loader,
+    #    device=device,
+    #    dataset_name=dataset_name,
+    #    num_episodes=200
+    #)
      # 💾 Salva il modello in cartella diversa per dataset
     # 🔹 Crea la directory di salvataggio in base al dataset
     checkpoint_dir = os.path.join("checkpoints", dataset_name.upper())  # garantisce maiuscolo
